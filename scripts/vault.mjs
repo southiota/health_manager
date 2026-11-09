@@ -1,11 +1,15 @@
 #!/usr/bin/env node
-// Copies watch records to this PC and encrypts them into docs/vault.
+// Copies watch records to this PC, keeps them encrypted in data/vault, analyzes them here,
+// and publishes only the encrypted analysis result (docs/vault/model.bin) for the page.
 //   node scripts/vault.mjs init                 create the access password and vault key (once)
 //   node scripts/vault.mjs passwd               change the access password (run in a terminal; input is hidden)
 //   node scripts/vault.mjs sync                 find the watch by name and import new files
 //   node scripts/vault.mjs sync --source <dir>  import from a folder instead of the watch
 //   node scripts/vault.mjs checkup              encrypt data/checkup/checkup.json (checkup results)
-// Options for tests: --vault <dir> --plain <dir> --env <file> --checkup <file>
+//   node scripts/vault.mjs publish              analyze the stored records again and rewrite model.bin
+// sync and checkup run publish at the end.
+// The raw store lives only on this PC. Run publish on the PC that holds it, in the same time zone as the page.
+// Options for tests: --vault <dir> --store <dir> --plain <dir> --env <file> --checkup <file>
 // The watch is only read. Passwords and health values are never printed.
 import { createCipheriv, createDecipheriv, createHash, pbkdf2Sync, randomBytes } from 'node:crypto';
 import { execFileSync } from 'node:child_process';
@@ -14,6 +18,7 @@ import { homedir, platform } from 'node:os';
 import { dirname, join, relative, sep } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { gzipSync, gunzipSync } from 'node:zlib';
+import { analyze } from '../docs/js/analyze.js';
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..');
 const ITERATIONS = 600000;
@@ -28,6 +33,7 @@ function option(name) {
   return i > 0 ? process.argv[i + 1] : undefined;
 }
 const VAULT = option('--vault') ?? join(ROOT, 'docs', 'vault');
+const STORE = option('--store') ?? join(ROOT, 'data', 'vault');
 const PLAIN = option('--plain') ?? join(ROOT, 'data', 'garmin');
 const ENV = option('--env') ?? join(ROOT, '.env');
 const CHECKUP = option('--checkup') ?? join(ROOT, 'data', 'checkup', 'checkup.json');
@@ -84,7 +90,7 @@ function init() {
     v: 1, kdf: 'PBKDF2-SHA256', iterations: ITERATIONS,
     salt: salt.toString('base64'), wrapped: seal(kek, 'key', dataKey).toString('base64'),
   }) + '\n');
-  writeAtomic(join(VAULT, 'index.bin'), seal(dataKey, 'index', gzipSync(JSON.stringify({ files: [] }))));
+  writeAtomic(join(STORE, 'index.bin'), seal(dataKey, 'index', gzipSync(JSON.stringify({ files: [] }))));
   console.log('암호와 저장소 키를 만들었습니다. 암호는 화면에 표시하지 않습니다.');
 }
 
@@ -187,7 +193,7 @@ function walk(dir, base = dir, out = []) {
   return out;
 }
 
-const indexPath = () => join(VAULT, 'index.bin');
+const indexPath = () => join(STORE, 'index.bin');
 const readIndex = (key) => JSON.parse(gunzipSync(open(key, 'index', readFileSync(indexPath()))).toString('utf8'));
 const writeIndex = (key, index) => writeAtomic(indexPath(), seal(key, 'index', gzipSync(JSON.stringify(index))));
 
@@ -205,14 +211,28 @@ function checkup() {
   const previous = index.files.filter((f) => f.folder === 'Checkup');
   if (previous.length === 1 && previous[0].sha256 === sha256) { console.log('검진 기록이 그대로입니다.'); return; }
   const id = randomBytes(16).toString('hex');
-  writeAtomic(join(VAULT, `${id}.bin`), seal(key, id, gzipSync(bytes)));
+  writeAtomic(join(STORE, `${id}.bin`), seal(key, id, gzipSync(bytes)));
   for (const old of previous) {
-    rmSync(join(VAULT, `${old.id}.bin`), { force: true });
+    rmSync(join(STORE, `${old.id}.bin`), { force: true });
     index.files.splice(index.files.indexOf(old), 1);
   }
   index.files.push({ id, path: 'Checkup/checkup.json', folder: 'Checkup', name: 'checkup.json', sha256, size: bytes.length, added: new Date().toISOString() });
   writeIndex(key, index);
   console.log(`검진 기록 ${data.exams.length}건을 암호화했습니다.`);
+  publish(key, index);
+}
+
+// Analyzes every stored record on this PC and writes one encrypted result for the page.
+function publish(key = loadKey(), index = readIndex(key)) {
+  const read = (f) => gunzipSync(open(key, f.id, readFileSync(join(STORE, `${f.id}.bin`))));
+  const files = index.files.filter((f) => f.folder !== 'Checkup').map((f) => ({ folder: f.folder, bytes: new Uint8Array(read(f)) }));
+  const model = analyze(files);
+  model.synced = index.synced ?? null;
+  const checkupFile = index.files.find((f) => f.folder === 'Checkup');
+  model.checkup = checkupFile ? JSON.parse(read(checkupFile).toString('utf8')) : null;
+  model.published = new Date().toISOString();
+  writeAtomic(join(VAULT, 'model.bin'), seal(key, 'model', gzipSync(JSON.stringify(model))));
+  console.log(`분석 결과를 만들었습니다. 읽은 파일 ${model.read.files}개, 못 읽은 파일 ${model.read.unreadable}개`);
 }
 
 function sync() {
@@ -234,10 +254,10 @@ function sync() {
     const plainPath = join(PLAIN, keepBoth && previous.length ? `${rel}.${sha256.slice(0, 8)}` : rel);
     mkdirSync(dirname(plainPath), { recursive: true });
     copyFileSync(path, plainPath);
-    writeAtomic(join(VAULT, `${id}.bin`), seal(key, id, gzipSync(bytes)));
+    writeAtomic(join(STORE, `${id}.bin`), seal(key, id, gzipSync(bytes)));
     if (!keepBoth) {
       for (const old of previous) {
-        rmSync(join(VAULT, `${old.id}.bin`), { force: true });
+        rmSync(join(STORE, `${old.id}.bin`), { force: true });
         index.files.splice(index.files.indexOf(old), 1);
         replaced++;
       }
@@ -248,6 +268,7 @@ function sync() {
   index.synced = new Date().toISOString();
   writeIndex(key, index);
   console.log(`새 파일 ${added}개, 교체 ${replaced}개, 그대로 ${same}개, 저장소 전체 ${index.files.length}개`);
+  publish(key, index);
 }
 
 try {
@@ -256,7 +277,8 @@ try {
   else if (command === 'sync') sync();
   else if (command === 'passwd') await passwd();
   else if (command === 'checkup') checkup();
-  else throw new Error('사용법: node scripts/vault.mjs init | passwd | sync [--source <폴더>] | checkup');
+  else if (command === 'publish') publish();
+  else throw new Error('사용법: node scripts/vault.mjs init | passwd | sync [--source <폴더>] | checkup | publish');
 } catch (e) {
   console.error(`실패: ${e.message}`);
   process.exit(1);

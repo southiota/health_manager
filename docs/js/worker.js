@@ -1,5 +1,5 @@
-// Fetches and decrypts the vault off the main thread, then analyzes it. Nothing leaves this browser.
-import { analyze } from './analyze.js';
+// Fetches and decrypts the analysis result off the main thread. Nothing leaves this browser.
+// The PC analyzes the watch records and publishes one encrypted file (scripts/vault.mjs publish).
 
 const b64 = (s) => Uint8Array.from(atob(s), (c) => c.charCodeAt(0));
 const utf8 = (s) => new TextEncoder().encode(s);
@@ -31,28 +31,9 @@ self.onmessage = async ({ data: { password } }) => {
       return;
     }
     const key = await crypto.subtle.importKey('raw', raw, 'AES-GCM', false, ['decrypt']);
-    const index = JSON.parse(new TextDecoder().decode(
-      await gunzip(new Uint8Array(await open(key, 'index', await fetchBytes('../vault/index.bin'))))));
-
-    const wanted = index.files.filter((f) => ['Activity', 'Summary', 'Monitor', 'Sleep', 'HRVStatus', 'Metrics'].includes(f.folder));
-    const files = [];
-    let next = 0;
-    const load = async () => {
-      while (next < wanted.length) {
-        const f = wanted[next++];
-        const sealed = await fetchBytes(`../vault/${f.id}.bin`);
-        files.push({ folder: f.folder, bytes: await gunzip(new Uint8Array(await open(key, f.id, sealed))) });
-        self.postMessage({ type: 'progress', step: '내려받는 중', done: files.length, total: wanted.length });
-      }
-    };
-    await Promise.all(Array.from({ length: 8 }, load));
-    const model = analyze(files, (done, total) => {
-      if (done % 10 === 0 || done === total) self.postMessage({ type: 'progress', step: '분석 중', done, total });
-    });
-    model.synced = index.synced ?? null;
-    const checkup = index.files.find((f) => f.folder === 'Checkup');
-    model.checkup = checkup ? JSON.parse(new TextDecoder().decode(
-      await gunzip(new Uint8Array(await open(key, checkup.id, await fetchBytes(`../vault/${checkup.id}.bin`)))))) : null;
+    self.postMessage({ type: 'progress', step: '기록 여는 중', done: 0, total: 1 });
+    const model = JSON.parse(new TextDecoder().decode(
+      await gunzip(new Uint8Array(await open(key, 'model', await fetchBytes('../vault/model.bin'))))));
     self.postMessage({ type: 'done', model });
   } catch {
     self.postMessage({ type: 'failed' });

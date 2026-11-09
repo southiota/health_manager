@@ -847,7 +847,7 @@ $('unlock').addEventListener('submit', (e) => {
   };
   worker.onerror = () => stop('페이지를 불러오지 못했습니다. 새로고침 후 다시 시도하세요.');
   worker.onmessage = ({ data }) => {
-    if (data.type === 'progress') status.textContent = `${data.step} ${data.done}/${data.total}`;
+    if (data.type === 'progress') status.textContent = data.total > 1 ? `${data.step} ${data.done}/${data.total}` : data.step;
     else if (data.type === 'badPassword') { stop('암호가 맞지 않습니다.'); input.select(); }
     else if (data.type === 'failed') stop('기록을 읽지 못했습니다. 잠시 뒤 다시 시도하세요.');
     else if (data.type === 'done') {
