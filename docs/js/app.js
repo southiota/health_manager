@@ -40,9 +40,12 @@ const clamp = (v, lo, hi) => Math.min(hi, Math.max(lo, v));
 
 // ---------- explanations ----------
 let openInfo = null;
+// On a phone the explanation slides up from the bottom, so it is easy to read and close with one hand.
+const PHONE = matchMedia('(max-width: 720px)');
 function closeInfo(refocus) {
   if (!openInfo) return;
   openInfo.box.remove();
+  openInfo.shade?.remove();
   openInfo.button.setAttribute('aria-expanded', 'false');
   if (refocus) openInfo.button.focus();
   openInfo = null;
@@ -56,6 +59,15 @@ function showInfo(button, key, label) {
     h('div', { class: 'infohead' }, h('b', null, label),
       h('button', { class: 'infoclose', type: 'button', 'aria-label': '설명 닫기', on: { click: () => closeInfo(true) } }, '×')),
     INFO_ORDER.filter((name) => data[name]).map((name) => [h('h3', null, name), h('ul', null, data[name].map((t) => h('li', null, t)))]));
+  if (PHONE.matches) {
+    const shade = h('div', { class: 'shade', on: { click: () => closeInfo(true) } });
+    box.classList.add('sheet');
+    document.body.append(shade, box);
+    button.setAttribute('aria-expanded', 'true');
+    openInfo = { box, button, key, shade };
+    box.querySelector('.infoclose').focus({ preventScroll: true });
+    return;
+  }
   document.body.append(box);
   const r = button.getBoundingClientRect();
   const width = box.offsetWidth;
@@ -215,26 +227,29 @@ function periodBar({ periods, i, cur }) {
     ['올해', startOf(span.latest, 'year'), span.latest],
     ['전체', span.first, span.latest],
   ];
+  // The second row (date jump, range, coverage) is folded so the period line stays short on a phone.
   return h('section', { class: 'periodbar' },
     h('div', { class: 'pbrow' },
-      h('div', { class: 'filters', role: 'group', 'aria-label': '기간 단위' }, UNIT_TABS.map(([k, t]) =>
-        h('button', { type: 'button', 'aria-pressed': String(ui.unit === k), on: { click: () => setUnit(k) } }, t))),
       h('div', { class: 'stepper' },
         h('button', { class: 'btn', type: 'button', 'aria-label': '이전 기간', 'aria-keyshortcuts': 'ArrowLeft', disabled: atStart, on: { click: () => stepPeriod(1) } }, '‹'),
         h('strong', { 'aria-live': 'polite' }, cur.label),
         h('button', { class: 'btn', type: 'button', 'aria-label': '다음 기간', 'aria-keyshortcuts': 'ArrowRight', disabled: atEnd, on: { click: () => stepPeriod(-1) } }, '›')),
-      isRange ? pill(`${cur.days}일`) : null,
-      running ? pill(`진행 중 ${running}일째`) : null,
-      !isRange && ui.offset > 0 ? h('button', { class: 'btn small', type: 'button', on: { click: () => { ui.offset = 0; draw(); } } }, '최신') : null,
-      infoBtn('period', '기간 보기')),
-    h('div', { class: 'pbrow' },
+      h('div', { class: 'filters units', role: 'group', 'aria-label': '기간 단위' }, UNIT_TABS.map(([k, t]) =>
+        h('button', { type: 'button', 'aria-pressed': String(ui.unit === k), on: { click: () => setUnit(k) } }, k === 'range' ? '기간' : t))),
+      !isRange && ui.offset > 0 ? h('button', { class: 'btn small', type: 'button', on: { click: () => { ui.offset = 0; draw(); } } }, '최신') : null),
+    h('details', { class: 'pbmore', open: isRange || null },
+      h('summary', null, h('span', { class: 'coverage' }, `수면 ${x.sleep.length}밤 · HRV ${x.hrv.length}밤 · 일상 ${x.days.length}일 · 운동 ${x.ex.length}회`),
+        isRange ? pill(`${cur.days}일`) : null,
+        running ? pill(`진행 중 ${running}일째`) : null,
+        h('span', { class: 'more' }, isRange ? '기간 설정' : '날짜 이동')),
+      h('div', { class: 'pbrow' },
+      infoBtn('period', '기간 보기'),
       isRange ? [
         dateInput('시작', cur.start, span, (v) => setRange(v, ui.range.end)),
         dateInput('끝', cur.end, span, (v) => setRange(ui.range.start, v)),
         h('div', { class: 'filters presets', role: 'group', 'aria-label': '빠른 선택' }, presets.map(([t, a, b]) =>
           h('button', { type: 'button', 'aria-pressed': String(ui.range.start === a && ui.range.end === b), on: { click: () => setRange(a, b) } }, t))),
-      ] : dateInput('날짜로 이동', cur.start < span.first ? span.first : cur.start > span.latest ? span.latest : cur.start, span, jumpTo),
-      h('span', { class: 'coverage' }, `수면 ${x.sleep.length}밤 · HRV ${x.hrv.length}밤 · 일상 ${x.days.length}일 · 운동 ${x.ex.length}회`)));
+      ] : dateInput('날짜로 이동', cur.start < span.first ? span.first : cur.start > span.latest ? span.latest : cur.start, span, jumpTo))));
 }
 // ← and → move between periods when no text field has focus.
 addEventListener('keydown', (e) => {
@@ -322,15 +337,19 @@ function nightPanel(m) {
   if (!now) return null;
   const [label, tone, say] = NIGHT_SAY[now.level];
   const fmt = (r, v) => (v == null ? '-' : `${v.toFixed(r.d)}${r.unit ? ` ${r.unit}` : ''}`);
+  const state = (r) => (r.value == null ? '-' : r.off ? pill('평소와 다름', 'fix') : r.stage.ready ? pill('평소', 'ok') : pill('비교 전'));
   return panel('간밤 신호', 'nightSignal', h('span', { class: 'tilefoot' }, pill(label, tone), pill(now.stage.text, now.stage.tone)),
     note(`${md(now.date)} 아침 · ${say}`),
-    h('div', { class: 'tbl' }, h('table', { class: 'nighttable' },
+    h('ul', { class: 'nightcards m-only' }, now.rows.map((r) => h('li', null,
+      h('div', null, h('b', null, r.label), h('span', { class: 'sub' }, `평소 ${fmt(r, r.mean)} · ${r.stage.text}`)),
+      h('div', { class: 'r' }, h('b', null, fmt(r, r.value)), state(r))))),
+    h('div', { class: 'tbl pc-only' }, h('table', { class: 'nighttable' },
       h('thead', null, h('tr', null, th('항목'), th('간밤', null, true), th('평소', null, true), th('차이', null, true), th('기준선'), th('상태'))),
       h('tbody', null, now.rows.map((r) => h('tr', null, h('td', null, r.label),
         h('td', { class: 'r strong' }, fmt(r, r.value)), h('td', { class: 'r' }, fmt(r, r.mean)),
         h('td', { class: 'r' }, r.diff == null ? '-' : Number(Math.abs(r.diff).toFixed(r.d)) === 0 ? '0' : `${r.diff > 0 ? '+' : '−'}${Math.abs(r.diff).toFixed(r.d)}`),
         h('td', null, r.stage.text),
-        h('td', null, r.value == null ? '-' : r.off ? pill('평소와 다름', 'fix') : r.stage.ready ? pill('평소', 'ok') : pill('비교 전'))))))),
+        h('td', null, state(r))))))),
     h('div', { class: 'nightstrip', role: 'img', 'aria-label': '최근 14밤 동안 평소와 다른 항목 수' }, list.map((x) => h('div', { class: `ns ${x.level}`, title: `${md(x.date)}: ${x.off}개 다름` },
       h('b', null, x.level === 'none' ? '-' : x.off), h('span', null, md(x.date))))),
     note('칸 숫자는 그날 평소와 다른 항목 수. 2 이상이면 신호입니다.'));
@@ -367,8 +386,7 @@ function today(m) {
   };
   return [
     judgeBand(j.tone, j.label, stale ? `최신 기록 ${md(newest)}. 시계를 연결하면 갱신됩니다` : '내 기준선과 비교한 판단', j.say, j.reasons, 'judgeToday'),
-    nightPanel(m),
-    grid('g4',
+    h('div', { class: 'grid hero' },
       panel('수면 점수', 'sleepScore', null, stat(night?.score ?? '-', '/ 100'),
         lineChart([{ v: scores }], { cls: 'chart short', lo: 40, hi: 100, label: '최근 14일 수면 점수 추세' }),
         note(`14일 평균 ${num(avg(scores))}`)),
@@ -376,12 +394,14 @@ function today(m) {
         stat(hrv ? num(hrv.last) : '-', 'ms'), hrv ? hrvTrack() : null, note(`${m.hrv.length}밤치 기록`)),
       panel('안정 심박', 'rhr', null, stat(rhr?.v ?? '-', 'bpm'),
         lineChart([{ v: m.rhr.slice(-14).map((x) => x.v) }], { cls: 'chart short', label: '최근 14일 안정 심박 추세' }),
-        note(`28일 평균 ${num(avg(m.rhr.slice(-28).map((x) => x.v)))}`)),
+        note(`28일 평균 ${num(avg(m.rhr.slice(-28).map((x) => x.v)))}`))),
+    nightPanel(m),
+    grid('g2',
       panel('최근 운동 효과', 'recentEffect', ex ? sub(md(ex.date)) : null, stat(ex ? num(ex.effect, 1) : '-', '훈련 효과'),
         ex?.zones ? h('div', { class: 'seg-row h-16', role: 'img', 'aria-label': '심박 구간 비율' }, ex.zones.map((z, i) => h('div', { class: `seg z${i + 1}`, style: { flex: `${z} 1 0` } }))) : null,
-        ex?.zones ? axis('구간 1', '구간 5') : null, ex ? note(`${ex.label} ${kor(ex.seconds)}`) : null)),
-    panel('이번 주 달라진 점', 'weekChange', h('a', { href: '#track', class: 'sub' }, '추적 화면에서 전체 보기'),
-      moved.better.length || moved.worse.length ? h('div', { class: 'changes' }, changeRows(moved.worse, 'fix'), changeRows(moved.better, 'ok')) : note('기준과 뚜렷하게 달라진 항목이 없거나 비교할 기록이 아직 부족합니다.')),
+        ex?.zones ? axis('구간 1', '구간 5') : null, ex ? note(`${ex.label} ${kor(ex.seconds)}`) : null),
+      panel('이번 주 달라진 점', 'weekChange', h('a', { href: '#track', class: 'sub' }, '추세에서 전체 보기'),
+        moved.better.length || moved.worse.length ? h('div', { class: 'changes' }, changeRows(moved.worse, 'fix'), changeRows(moved.better, 'ok')) : note('기준과 뚜렷하게 달라진 항목이 없거나 비교할 기록이 아직 부족합니다.'))),
     grid('g2',
       panel('어젯밤 수면', 'lastNight', night ? sub(`${hhmm(night.start)} ~ ${hhmm(night.end)} · ${hm(night.asleep)}`) : null,
         night ? [nightBand(night), legend(['s-deep', `깊은 잠 ${hm(night.totals.deep)}`], ['s-light', `얕은 잠 ${hm(night.totals.light)}`], ['s-rem', `REM ${hm(night.totals.rem)}`], ['s-awake', `깸 ${hm(night.totals.awake)}`])] : empty()),
@@ -809,23 +829,37 @@ function checkupScreen(m) {
 }
 
 // ---------- shell ----------
-const SCREENS = { today: ['오늘', today], track: ['추적', trackScreen], sleep: ['수면', sleepScreen], recovery: ['회복·스트레스', recoveryScreen], activity: ['활동·운동', activityScreen], dive: ['잠수', diveScreen], checkup: ['검진', checkupScreen] };
+const SCREENS = { today: ['오늘', today], track: ['추세', trackScreen], sleep: ['수면', sleepScreen], recovery: ['회복·스트레스', recoveryScreen], activity: ['활동·운동', activityScreen], dive: ['잠수', diveScreen], checkup: ['검진', checkupScreen] };
+// Four sections, as in common health apps. A phone shows them as a bar fixed to the bottom.
+const SECTIONS = [
+  ['오늘', ['today']],
+  ['지표', ['sleep', 'recovery', 'activity']],
+  ['추세', ['track']],
+  ['기록', ['checkup', 'dive']],
+];
+const SECTION_ICON = { 오늘: '◎', 지표: '▤', 추세: '↗', 기록: '▣' };
 let model = null;
 
 function draw() {
   closeInfo(false);
   const key = SCREENS[location.hash.slice(1)] ? location.hash.slice(1) : 'today';
   const [title, screen] = SCREENS[key];
+  const [section, members] = SECTIONS.find(([, list]) => list.includes(key));
   const synced = model.synced ? new Date(model.synced) : null;
   const app = $('app');
   const y = scrollY;
+  const sectionLinks = (cls) => h('nav', { class: cls, 'aria-label': '화면' }, SECTIONS.map(([t, list]) =>
+    h('a', { href: `#${list[0]}`, 'aria-current': t === section ? 'page' : null }, h('i', { 'aria-hidden': 'true' }, SECTION_ICON[t]), h('span', null, t))));
   app.replaceChildren(h('div', { class: 'wrap' },
     h('header', { class: 'top' },
       h('div', null, h('div', { class: 'prompt' }, h('b', null, '>'), ' 건강관리'), h('h1', null, title)),
-      h('div', { class: 'meta' }, synced ? h('span', null, `마지막 동기화 ${synced.getMonth() + 1}/${synced.getDate()} ${hhmm(synced)}`) : null,
+      h('div', { class: 'meta' }, synced ? h('span', null, `동기화 ${synced.getMonth() + 1}/${synced.getDate()} ${hhmm(synced)}`) : null,
         h('button', { class: 'btn', type: 'button', on: { click: () => location.reload() } }, '잠금'))),
-    h('nav', { class: 'tabs', 'aria-label': '화면' }, Object.entries(SCREENS).map(([k, [t]]) => h('a', { href: `#${k}`, 'aria-current': k === key ? 'page' : null }, t))),
-    screen(model)));
+    sectionLinks('tabs'),
+    members.length > 1 ? h('nav', { class: 'subtabs', 'aria-label': `${section} 안의 화면` }, members.map((k) =>
+      h('a', { href: `#${k}`, 'aria-current': k === key ? 'page' : null }, SCREENS[k][0]))) : null,
+    screen(model)),
+  sectionLinks('bottombar'));
   scrollTo(0, y);
 }
 addEventListener('hashchange', () => { if (model) { draw(); scrollTo(0, 0); } });

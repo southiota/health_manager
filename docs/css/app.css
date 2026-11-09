@@ -109,3 +109,77 @@ tr.history .chart, tr.history .bars { background: var(--surface); }
   .datefield { flex: 1 1 140px; }
   .datefield input { flex: 1; min-width: 0; }
 }
+
+/* ---------- layout v2 (11/09): four sections, bottom bar on a phone ---------- */
+nav.tabs a i { display: none; }
+.subtabs { display: flex; gap: 0; border-bottom: 1px solid var(--line); margin-top: -8px; }
+.subtabs a { flex: 0 0 auto; display: inline-flex; align-items: center; min-height: 44px; padding: 0 16px; font-size: 14px; text-decoration: none; color: var(--muted); border-bottom: 2px solid transparent; margin-bottom: -1px; }
+.subtabs a[aria-current="page"] { color: var(--fg); border-bottom-color: var(--fg); font-weight: 700; }
+.bottombar { display: none; }
+.pbmore summary { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 10px; min-height: 36px; cursor: pointer; list-style: none; }
+.pbmore summary::-webkit-details-marker { display: none; }
+.pbmore summary .more { margin-left: auto; font-size: 12.5px; color: var(--muted); text-decoration: underline; text-underline-offset: 3px; }
+.pbmore[open] summary .more { color: var(--fg); }
+.pbmore > .pbrow { padding-top: 8px; }
+.units button { min-width: 44px; }
+.hero { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+.m-only { display: none; }
+.nightcards { list-style: none; margin: 0; padding: 0; }
+.nightcards li { display: flex; justify-content: space-between; align-items: center; gap: 10px; padding: 10px 0; border-bottom: 1px solid var(--line); }
+.nightcards li > div { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.nightcards li > div.r { align-items: flex-end; text-align: right; }
+.nightcards .sub { font-size: 12px; }
+.shade { position: fixed; inset: 0; z-index: 29; background: rgba(0, 0, 0, .45); }
+.infobox.sheet { position: fixed; left: 0; right: 0; bottom: 0; top: auto; width: auto; max-height: 72vh; padding: 16px 18px calc(20px + env(safe-area-inset-bottom)); border: 0; border-top: 2px solid var(--fg); font-size: 15px; }
+.infobox.sheet .infohead { position: sticky; top: -16px; margin: -16px -18px 4px; padding: 14px 18px 8px; background: var(--surface); font-size: 16px; }
+.infobox.sheet .infoclose { width: 44px; height: 44px; margin: -10px -12px -10px 0; font-size: 24px; }
+.infobox.sheet h3 { font-size: 13.5px; }
+
+@media (max-width: 720px) {
+  .wrap { gap: 14px; padding: 14px 12px calc(84px + env(safe-area-inset-bottom)); }
+  header.top { flex-wrap: nowrap; align-items: center; padding-bottom: 10px; }
+  header.top .prompt { display: none; }
+  header.top h1 { font-size: 22px; margin: 0; }
+  header.top .meta { font-size: 12px; gap: 8px; }
+  header.top .meta .btn { min-height: 36px; padding: 0 10px; }
+  nav.tabs { display: none; }
+  .subtabs { margin-top: -4px; overflow-x: auto; }
+  .bottombar { display: grid; grid-template-columns: repeat(4, 1fr); position: fixed; left: 0; right: 0; bottom: 0; z-index: 20; padding-bottom: env(safe-area-inset-bottom); background: var(--surface); border-top: 1px solid var(--line); }
+  .bottombar a { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px; min-height: 58px; font-size: 12px; text-decoration: none; color: var(--muted); }
+  .bottombar a i { font-style: normal; font-size: 19px; line-height: 1; }
+  .bottombar a[aria-current="page"] { color: var(--fg); font-weight: 700; box-shadow: inset 0 2px 0 var(--fg); }
+  .periodbar { padding: 8px 10px; gap: 6px; }
+  .periodbar .pbrow { gap: 6px; }
+  .stepper { width: 100%; }
+  .stepper .btn { min-height: 40px; }
+  .units { width: 100%; display: grid; grid-template-columns: repeat(5, 1fr); }
+  .units button { min-height: 36px; padding: 0; }
+  .pbmore summary { min-height: 32px; }
+  .judge { padding: 14px 14px; gap: 8px; }
+  .judge .say { font-size: 19px; }
+  .hero { gap: 8px; }
+  .hero .panel { padding: 10px 10px 12px; gap: 6px; }
+  .hero .panel h2 { font-size: 12.5px; }
+  .hero .panel .head { flex-wrap: nowrap; }
+  .hero .panel .head > .pill { display: none; }
+  .hero .num { font-size: 26px; }
+  .hero .unit { font-size: 11px; }
+  .hero .chart.short { height: 34px; }
+  .hero .note { font-size: 11.5px; }
+  .hero .track + .axis { display: none; }
+  .panel { padding: 14px 14px 16px; }
+  .m-only { display: block; }
+  .pc-only { display: none; }
+  .info { width: 36px; height: 36px; margin: -8px -4px; }
+  .info span { width: 18px; height: 18px; font-size: 12px; }
+  .tracktable { min-width: 0; table-layout: auto; }
+  .tracktable > thead th:nth-child(n) { width: auto; }
+  .tracktable > thead th:nth-child(3), .tracktable > thead th:nth-child(4), .tracktable > thead th:nth-child(5), .tracktable > thead th:nth-child(7),
+  .tracktable > tbody > tr:not(.history) > td:nth-child(3), .tracktable > tbody > tr:not(.history) > td:nth-child(4), .tracktable > tbody > tr:not(.history) > td:nth-child(5), .tracktable > tbody > tr:not(.history) > td:nth-child(7) { display: none; }
+  .g4 { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
+  .g4 > .panel { padding: 12px 12px 14px; gap: 6px; }
+  .g4 .num { font-size: 24px; }
+  .g4 .panel h2 { font-size: 13px; }
+  .g4 .tilefoot .note { font-size: 12px; }
+  .tracktable > thead th:nth-child(6), .tracktable > tbody > tr > td:nth-child(6) { padding-left: 10px; }
+}
