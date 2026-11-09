@@ -183,3 +183,26 @@ nav.tabs a i { display: none; }
   .g4 .tilefoot .note { font-size: 12px; }
   .tracktable > thead th:nth-child(6), .tracktable > tbody > tr > td:nth-child(6) { padding-left: 10px; }
 }
+
+/* phone turned sideways (e.g. iPhone 14 Pro Max, 932×430): wide enough for the PC grid, too short for its header */
+@media (orientation: landscape) and (max-height: 500px) {
+  .wrap { gap: 12px; padding: 10px max(14px, env(safe-area-inset-right)) calc(56px + env(safe-area-inset-bottom)) max(14px, env(safe-area-inset-left)); }
+  header.top { flex-wrap: nowrap; align-items: center; padding-bottom: 8px; }
+  header.top .prompt { display: none; }
+  header.top h1 { font-size: 20px; margin: 0; }
+  header.top .meta { font-size: 12px; gap: 8px; }
+  header.top .meta .btn { min-height: 34px; padding: 0 10px; }
+  nav.tabs { display: none; }
+  .subtabs { margin-top: -4px; }
+  .subtabs a { min-height: 38px; }
+  .bottombar { display: grid; grid-template-columns: repeat(4, 1fr); position: fixed; left: 0; right: 0; bottom: 0; z-index: 20; padding: 0 env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left); background: var(--surface); border-top: 1px solid var(--line); }
+  .bottombar a { display: flex; align-items: center; justify-content: center; gap: 6px; min-height: 44px; font-size: 13px; text-decoration: none; color: var(--muted); }
+  .bottombar a i { font-style: normal; font-size: 16px; line-height: 1; }
+  .bottombar a[aria-current="page"] { color: var(--fg); font-weight: 700; box-shadow: inset 0 2px 0 var(--fg); }
+  .periodbar { padding: 6px 10px; gap: 4px; }
+  .stepper .btn, .units button { min-height: 36px; }
+  .pbmore summary { min-height: 30px; }
+  .judge { padding: 12px 14px; gap: 6px; }
+  .judge .say { font-size: 18px; }
+  .panel { padding: 12px 14px 14px; }
+}

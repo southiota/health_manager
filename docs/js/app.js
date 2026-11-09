@@ -41,7 +41,7 @@ const clamp = (v, lo, hi) => Math.min(hi, Math.max(lo, v));
 // ---------- explanations ----------
 let openInfo = null;
 // On a phone the explanation slides up from the bottom, so it is easy to read and close with one hand.
-const PHONE = matchMedia('(max-width: 720px)');
+const PHONE = matchMedia('(max-width: 720px), (orientation: landscape) and (max-height: 500px)');
 function closeInfo(refocus) {
   if (!openInfo) return;
   openInfo.box.remove();
