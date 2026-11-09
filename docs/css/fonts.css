@@ -1,0 +1,4 @@
+/* D2Coding and Unbounded, SIL OFL. Licenses are in ../fonts. */
+@font-face { font-family: "D2Coding"; src: url("../fonts/D2Coding.ttf") format("truetype"); font-weight: 400; font-display: swap; }
+@font-face { font-family: "D2Coding"; src: url("../fonts/D2CodingBold.ttf") format("truetype"); font-weight: 700; font-display: swap; }
+@font-face { font-family: "Unbounded"; src: url("../fonts/Unbounded-VF.ttf") format("truetype"); font-weight: 200 900; font-display: swap; }

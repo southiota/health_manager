@@ -1,0 +1,30 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self'; worker-src 'self'; style-src 'self'; font-src 'self'; connect-src 'self'; base-uri 'none'; form-action 'none'">
+<meta name="referrer" content="no-referrer">
+<meta name="robots" content="noindex, nofollow">
+<title>기록</title>
+<link rel="stylesheet" href="css/fonts.css">
+<link rel="stylesheet" href="css/health.css">
+<link rel="stylesheet" href="css/app.css">
+<script type="module" src="js/app.js"></script>
+</head>
+<body>
+<div class="lock" id="lock">
+  <form class="lockbox" id="unlock" autocomplete="on">
+    <div class="prompt"><b>&gt;</b> 기록</div>
+    <h1>잠겨 있습니다</h1>
+    <div>
+      <label for="pw">접속 암호</label>
+      <input id="pw" type="password" autocomplete="current-password" autocapitalize="off" autocorrect="off" spellcheck="false" required>
+    </div>
+    <button class="btn primary" type="submit" id="open">열기</button>
+    <p class="note" id="status" role="status">암호는 이 브라우저 안에서만 쓰이고 어디에도 전송되지 않습니다. 탭을 닫으면 다시 잠깁니다.</p>
+  </form>
+</div>
+<div id="app" hidden></div>
+</body>
+</html>
