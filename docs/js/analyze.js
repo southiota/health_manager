@@ -3,7 +3,7 @@ import { Decoder, Stream } from '../vendor/fitsdk/src/index.js';
 
 const FIT_EPOCH = 631065600000;
 const USED = new Set(['Activity', 'Summary', 'Monitor', 'Sleep', 'HRVStatus', 'Metrics']);
-const PROFILE_NAMES = { Gabber: '춤' };
+const PROFILE_NAMES = { Gabber: 'GABBER' };
 const MAX_POINTS = 240;
 
 const pad = (n) => String(n).padStart(2, '0');

@@ -625,7 +625,7 @@ function sessionDetail(x) {
     x.heart.length ? [lineChart([{ v: x.heart.map((p) => p[1]) }], { label: '운동 중 심박', tips: x.heart.map((p) => `${Math.round(p[0] / 60)}분: ${p[1]} bpm`) }), axis('0분', kor(x.seconds))] : note('이 운동은 요약 기록만 남아 있습니다.'),
     grid('g2',
       h('div', { class: 'flex-col' }, titled('h2', '심박 구간별 시간', 'sessionZones'), x.zones ? [zoneRows(x.zones), note('단위는 전체 시간 대비 %')] : empty('구간 기록이 없습니다.')),
-      x.kind === 'dance' ? h('div', { class: 'flex-col' }, titled('h2', '춤은 강도로 봅니다', 'danceDetail'),
+      x.kind === 'dance' ? h('div', { class: 'flex-col' }, titled('h2', 'GABBER는 강도로 봅니다', 'danceDetail'),
         grid('g2',
           h('div', null, note('고강도 시간 (구간 4·5)'), stat(x.high == null ? '-' : hm(x.high / 60), null, 'num md')),
           h('div', null, note('무산소 효과'), stat(num(x.anaerobic, 1), null, 'num md'))))
@@ -668,7 +668,7 @@ function activityScreen(m) {
       panel('날짜별 운동 시간', 'exDaily', windowSub(view, null), exShown.length ? [barChart(perDay.map((rows) => [
         [(minutes(rows.filter((r) => r.kind !== 'dance')) / topDay) * 100, 'bar dim'], [(minutes(rows.filter((r) => r.kind === 'dance')) / topDay) * 100, 'bar'],
       ]), '날짜별 운동 시간', perDay.map((rows, i) => (rows.length ? `${md(days[i])}: ${hm(minutes(rows))}` : null))),
-      axis(md(days[0]), md(last(days))), legend(['swatch-fg', '춤'], ['swatch-grey', '러닝·기타'])] : empty()),
+      axis(md(days[0]), md(last(days))), legend(['swatch-fg', 'GABBER'], ['swatch-grey', '러닝·기타'])] : empty()),
       panel('날짜별 걸음', 'stepsDaily', windowSub(view, null), stepShown.length ? [barChart(days.map((d) => [[((stepBy.get(d) ?? 0) / peak) * 100, 'bar']]), '날짜별 걸음 수', days.map((d) => (stepBy.has(d) ? `${md(d)}: ${stepBy.get(d).toLocaleString('ko-KR')}걸음` : null))),
         axis(md(days[0]), md(last(days)))] : empty())),
     grid('g3', ['exTime', 'highTime', 'load'].map((id) => trendPanel(view, id))),
@@ -680,7 +680,7 @@ function activityScreen(m) {
         axis(zoneList[0].p.short, last(zoneList).p.short),
         legend(['z1', '구간 1'], ['z2', '구간 2'], ['z3', '구간 3'], ['z4', '구간 4'], ['z5', '구간 5']))),
     sessionTable(shown, '운동 기록',
-      h('div', { class: 'filters', role: 'group', 'aria-label': '종목' }, [['all', '전체'], ['dance', '춤'], ['run', '러닝']].map(([k, t]) => h('button', { type: 'button', 'aria-pressed': String(ui.sport === k), on: { click: () => { ui.sport = k; draw(); } } }, t))),
+      h('div', { class: 'filters', role: 'group', 'aria-label': '종목' }, [['all', '전체'], ['dance', 'GABBER'], ['run', '러닝']].map(([k, t]) => h('button', { type: 'button', 'aria-pressed': String(ui.sport === k), on: { click: () => { ui.sport = k; draw(); } } }, t))),
       (r) => { ui.session = r; draw(); }, cur),
     cur ? sessionDetail(cur) : null,
   ];

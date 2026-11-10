@@ -144,7 +144,7 @@ export const METRICS = [
   { id: 'exTime', group: '운동', label: '운동 시간', fmt: 'min', better: null, step: 30, kind: 'sum', n: () => 3, get: (x) => minutesOf(x.ex) },
   { id: 'exCount', group: '운동', label: '운동 횟수', fmt: 'int', better: null, step: 1, kind: 'sum', n: () => 3, get: (x) => x.ex.length },
   { id: 'exDays', group: '운동', label: '운동한 날', fmt: 'int', better: null, step: 1, kind: 'sum', n: () => 3, get: (x) => new Set(x.ex.map((s) => s.date)).size },
-  { id: 'danceTime', group: '운동', label: '춤 시간', fmt: 'min', better: null, step: 30, kind: 'sum', n: () => 3, get: (x) => minutesOf(x.ex.filter((s) => s.kind === 'dance')) },
+  { id: 'danceTime', group: '운동', label: 'GABBER 시간', fmt: 'min', better: null, step: 30, kind: 'sum', n: () => 3, get: (x) => minutesOf(x.ex.filter((s) => s.kind === 'dance')) },
   { id: 'runTime', group: '운동', label: '러닝 시간', fmt: 'min', better: null, step: 15, kind: 'sum', n: () => 3, get: (x) => minutesOf(x.ex.filter((s) => s.kind === 'run')) },
   { id: 'highTime', group: '운동', label: '고강도 시간', fmt: 'min', better: null, step: 10, kind: 'sum', n: () => 3, get: (x) => sumOf(x.ex.map((s) => s.high)) / 60 },
   { id: 'effect', group: '운동', label: '평균 유산소 효과', fmt: 'dec1', better: null, step: 0.3, n: exN, get: (x) => avg(x.ex.map((s) => s.effect)) },
